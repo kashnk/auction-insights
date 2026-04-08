@@ -19,12 +19,12 @@ export function DiminishingReturnsChart({
   curvePoints: SimulationResult[];
 }) {
   const chartData = curvePoints
-    .filter((p) => p.marginalCPC > 0 && p.marginalCPC < 1000)
+    .filter((p) => p.marginalCPL > 0 && p.marginalCPL < 10000)
     .map((p) => ({
       spend: Math.round(p.spend),
-      marginalCPC: Math.round(p.marginalCPC * 100) / 100,
+      marginalCPL: Math.round(p.marginalCPL * 100) / 100,
       predictedIS: Math.round(p.predictedIS * 1000) / 10,
-      incrementalClicks: Math.round(p.incrementalClicks),
+      incrementalLeads: Math.round(p.incrementalLeads),
     }));
 
   return (
@@ -42,12 +42,12 @@ export function DiminishingReturnsChart({
               tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
             />
             <YAxis
-              yAxisId="cpc"
+              yAxisId="cpl"
               orientation="left"
               tick={{ fontSize: 12 }}
               tickFormatter={(v) => `$${v}`}
               label={{
-                value: "Marginal CPC",
+                value: "Marginal CPL",
                 angle: -90,
                 position: "insideLeft",
               }}
@@ -67,7 +67,7 @@ export function DiminishingReturnsChart({
             <Tooltip
               formatter={(value, name) => {
                 const v = Number(value);
-                if (name === "marginalCPC") return [`$${v.toFixed(2)}`, "Marginal CPC"];
+                if (name === "marginalCPL") return [`$${v.toFixed(2)}`, "Marginal CPL"];
                 if (name === "predictedIS") return [`${v}%`, "Predicted IS"];
                 return [String(value), String(name)];
               }}
@@ -75,13 +75,13 @@ export function DiminishingReturnsChart({
             />
             <Legend />
             <Line
-              yAxisId="cpc"
+              yAxisId="cpl"
               type="monotone"
-              dataKey="marginalCPC"
+              dataKey="marginalCPL"
               stroke="#dc2626"
               strokeWidth={2}
               dot={false}
-              name="Marginal CPC"
+              name="Marginal CPL"
             />
             <Line
               yAxisId="is"

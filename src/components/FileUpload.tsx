@@ -68,15 +68,18 @@ export function FileUpload({
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
           className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 transition-colors"
-          onClick={() => {
+          onClick={(e) => {
+            e.stopPropagation();
             const input = document.createElement("input");
             input.type = "file";
             input.accept = ".csv";
-            input.onchange = (e) => {
-              const file = (e.target as HTMLInputElement).files?.[0];
+            input.onchange = (ev) => {
+              const file = (ev.target as HTMLInputElement).files?.[0];
               if (file) handleFile(file);
             };
+            document.body.appendChild(input);
             input.click();
+            document.body.removeChild(input);
           }}
         >
           {loaded ? (

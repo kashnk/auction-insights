@@ -123,30 +123,33 @@ export function predictIS(
 }
 
 /**
- * Estimate clicks at a given spend level using historical CPC trends
+ * Estimate leads (conversions) at a given spend level using historical CPL trends
  */
-function estimateClicks(
+function estimateLeads(
   spend: number,
   points: SpendISDataPoint[],
 ): number {
   if (points.length === 0 || spend <= 0) return 0;
 
-  // Use weighted average CPC from data, adjusted for diminishing returns
-  const avgCPC =
-    points.reduce((s, p) => s + (p.clicks > 0 ? p.spend / p.clicks : 0), 0) /
-    points.filter((p) => p.clicks > 0).length;
+  // Use weighted average CPL from data, adjusted for diminishing returns
+  const pointsWithConversions = points.filter((p) => p.conversions > 0);
+  if (pointsWithConversions.length === 0) return 0;
 
-  if (!avgCPC || avgCPC <= 0) return 0;
+  const avgCPL =
+    pointsWithConversions.reduce((s, p) => s + p.spend / p.conversions, 0) /
+    pointsWithConversions.length;
 
-  // As spend increases beyond observed range, CPC increases (diminishing returns)
+  if (!avgCPL || avgCPL <= 0) return 0;
+
+  // As spend increases beyond observed range, CPL increases (diminishing returns)
   const maxObservedSpend = Math.max(...points.map((p) => p.spend));
   const spendRatio = spend / maxObservedSpend;
 
-  // CPC scales with sqrt of spend ratio beyond observed data
-  const adjustedCPC =
-    spendRatio > 1 ? avgCPC * Math.sqrt(spendRatio) : avgCPC;
+  // CPL scales with sqrt of spend ratio beyond observed data
+  const adjustedCPL =
+    spendRatio > 1 ? avgCPL * Math.sqrt(spendRatio) : avgCPL;
 
-  return spend / adjustedCPC;
+  return spend / adjustedCPL;
 }
 
 export function simulateSpend(
@@ -156,22 +159,22 @@ export function simulateSpend(
   baseSpend?: number
 ): SimulationResult {
   const base = baseSpend ?? (points.length > 0 ? points[points.length - 1].spend : 0);
-  const baseClicks = estimateClicks(base, points);
+  const baseLeads = estimateLeads(base, points);
 
   const newIS = predictIS(targetSpend, curve);
-  const newClicks = estimateClicks(targetSpend, points);
+  const newLeads = estimateLeads(targetSpend, points);
 
-  const incrementalClicks = Math.max(0, newClicks - baseClicks);
+  const incrementalLeads = Math.max(0, newLeads - baseLeads);
   const incrementalSpend = Math.max(0, targetSpend - base);
-  const marginalCPC =
-    incrementalClicks > 0 ? incrementalSpend / incrementalClicks : 0;
+  const marginalCPL =
+    incrementalLeads > 0 ? incrementalSpend / incrementalLeads : 0;
 
   return {
     spend: targetSpend,
     predictedIS: newIS,
-    predictedClicks: newClicks,
-    marginalCPC,
-    incrementalClicks,
+    predictedLeads: newLeads,
+    marginalCPL,
+    incrementalLeads,
     incrementalSpend,
   };
 }

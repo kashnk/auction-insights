@@ -66,29 +66,29 @@ export function SpendSimulator({ dataPoints, curve }: SpendSimulatorProps) {
             subtext={`${spendChangePct >= 0 ? "+" : ""}${spendChangePct.toFixed(0)}% spend`}
           />
           <MetricCard
-            label="Predicted Clicks"
-            value={Math.round(result.predictedClicks).toLocaleString()}
-            subtext={`+${Math.round(result.incrementalClicks).toLocaleString()} incremental`}
+            label="Predicted Leads"
+            value={Math.round(result.predictedLeads).toLocaleString()}
+            subtext={`+${Math.round(result.incrementalLeads).toLocaleString()} incremental`}
           />
           <MetricCard
-            label="Marginal CPC"
+            label="Marginal CPL"
             value={
-              result.marginalCPC > 0
-                ? `$${result.marginalCPC.toFixed(2)}`
+              result.marginalCPL > 0
+                ? `$${result.marginalCPL.toFixed(2)}`
                 : "—"
             }
-            subtext="Cost per incremental click"
-            warn={result.marginalCPC > (currentSpend > 0 && dataPoints[dataPoints.length - 1]?.clicks > 0
-              ? currentSpend / dataPoints[dataPoints.length - 1].clicks * 2
+            subtext="Cost per incremental lead"
+            warn={result.marginalCPL > (currentSpend > 0 && dataPoints[dataPoints.length - 1]?.conversions > 0
+              ? currentSpend / dataPoints[dataPoints.length - 1].conversions * 2
               : Infinity)}
           />
           <MetricCard
             label="Incremental Spend"
             value={`$${Math.round(result.incrementalSpend).toLocaleString()}`}
             subtext={
-              result.incrementalClicks > 0
-                ? `${Math.round(result.incrementalClicks)} more clicks`
-                : "No additional clicks"
+              result.incrementalLeads > 0
+                ? `${Math.round(result.incrementalLeads)} more leads`
+                : "No additional leads"
             }
           />
         </div>

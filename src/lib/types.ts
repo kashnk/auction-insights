@@ -66,8 +66,8 @@ export interface SpendISDataPoint {
 export interface SimulationResult {
   spend: number;
   predictedIS: number;
-  predictedClicks: number;
-  marginalCPC: number;
-  incrementalClicks: number;
+  predictedLeads: number;
+  marginalCPL: number;
+  incrementalLeads: number;
   incrementalSpend: number;
 }
