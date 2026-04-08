@@ -1,101 +1,199 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useMemo, useCallback } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { FileUpload } from "@/components/FileUpload";
+import { CompetitorTable } from "@/components/CompetitorTable";
+import { ISTrendChart } from "@/components/charts/ISTrendChart";
+import { OverlapHeatmap } from "@/components/charts/OverlapHeatmap";
+import { SpendISChart } from "@/components/charts/SpendISChart";
+import { DiminishingReturnsChart } from "@/components/charts/DiminishingReturnsChart";
+import { SpendSimulator } from "@/components/SpendSimulator";
+import {
+  parseAuctionInsightsCSV,
+  parseCampaignPerformanceCSV,
+  joinData,
+} from "@/lib/parser";
+import {
+  getCompetitorSummaries,
+  getSpendISData,
+  fitLogCurve,
+  generateSimulationCurve,
+  getOverlapMatrix,
+} from "@/lib/analytics";
+import { AuctionInsightRow, CampaignPerformanceRow } from "@/lib/types";
+import { SAMPLE_AUCTION_CSV, SAMPLE_PERFORMANCE_CSV } from "@/lib/sample-data";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [auctionData, setAuctionData] = useState<AuctionInsightRow[]>([]);
+  const [perfData, setPerfData] = useState<CampaignPerformanceRow[]>([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const handleAuctionUpload = useCallback((csv: string) => {
+    setAuctionData(parseAuctionInsightsCSV(csv));
+  }, []);
+
+  const handlePerfUpload = useCallback((csv: string) => {
+    setPerfData(parseCampaignPerformanceCSV(csv));
+  }, []);
+
+  const loadSampleData = useCallback(() => {
+    setAuctionData(parseAuctionInsightsCSV(SAMPLE_AUCTION_CSV));
+    setPerfData(parseCampaignPerformanceCSV(SAMPLE_PERFORMANCE_CSV));
+  }, []);
+
+  const joined = useMemo(
+    () => joinData(auctionData, perfData),
+    [auctionData, perfData]
+  );
+  const summaries = useMemo(
+    () => getCompetitorSummaries(joined),
+    [joined]
+  );
+  const spendISData = useMemo(() => getSpendISData(joined), [joined]);
+  const curve = useMemo(() => fitLogCurve(spendISData), [spendISData]);
+  const simulationCurve = useMemo(
+    () => generateSimulationCurve(spendISData, curve),
+    [spendISData, curve]
+  );
+  const overlapData = useMemo(() => getOverlapMatrix(joined), [joined]);
+
+  const hasData = auctionData.length > 0;
+  const hasSpendData = spendISData.length >= 2;
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Auction Insights Analyzer
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Upload Google Ads Auction Insights and Campaign Performance reports
+            to analyze your competitive landscape and simulate spend scenarios.
+          </p>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <FileUpload
+            title="Auction Insights Report"
+            description="CSV with competitors, impression share, overlap rates by time period"
+            onFileLoaded={handleAuctionUpload}
+            loaded={auctionData.length > 0}
+            rowCount={auctionData.length}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <FileUpload
+            title="Campaign Performance Report"
+            description="CSV with spend, clicks, impressions, conversions by time period"
+            onFileLoaded={handlePerfUpload}
+            loaded={perfData.length > 0}
+            rowCount={perfData.length}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </div>
+
+        {!hasData && (
+          <Card className="mb-6">
+            <CardContent className="py-8 text-center">
+              <p className="text-muted-foreground mb-4">
+                Upload your CSV files above to get started, or try with sample data.
+              </p>
+              <Button onClick={loadSampleData} variant="outline">
+                Load Sample Data
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {hasData && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <StatCard
+                label="Competitors Tracked"
+                value={summaries.length.toString()}
+              />
+              <StatCard
+                label="Time Periods"
+                value={Array.from(new Set(joined.map((d) => d.dateLabel))).length.toString()}
+              />
+              <StatCard
+                label="Your Avg. IS"
+                value={`${(
+                  (summaries.find(
+                    (s) =>
+                      s.competitor.toLowerCase() === "you" ||
+                      s.competitor.toLowerCase().includes("you")
+                  )?.avgImpressionShare ?? 0) * 100
+                ).toFixed(1)}%`}
+              />
+              <StatCard
+                label="Total Spend"
+                value={`$${Math.round(
+                  perfData.reduce((s, p) => s + p.spend, 0)
+                ).toLocaleString()}`}
+              />
+            </div>
+
+            <Separator className="mb-6" />
+
+            <Tabs defaultValue="landscape" className="space-y-4">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="landscape">Landscape</TabsTrigger>
+                <TabsTrigger value="trends">Trends</TabsTrigger>
+                <TabsTrigger value="simulator" disabled={!hasSpendData}>
+                  Simulator
+                </TabsTrigger>
+                <TabsTrigger value="returns" disabled={!hasSpendData}>
+                  Returns
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="landscape" className="space-y-4">
+                <CompetitorTable summaries={summaries} />
+                <OverlapHeatmap
+                  competitors={overlapData.competitors}
+                  matrix={overlapData.matrix}
+                />
+              </TabsContent>
+
+              <TabsContent value="trends" className="space-y-4">
+                <ISTrendChart data={joined} />
+              </TabsContent>
+
+              <TabsContent value="simulator" className="space-y-4">
+                {hasSpendData && (
+                  <>
+                    <SpendSimulator dataPoints={spendISData} curve={curve} />
+                    <SpendISChart
+                      dataPoints={spendISData}
+                      curvePoints={simulationCurve}
+                      r2={curve.r2}
+                    />
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="returns" className="space-y-4">
+                {hasSpendData && (
+                  <DiminishingReturnsChart curvePoints={simulationCurve} />
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-3">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="text-2xl font-bold mt-1">{value}</p>
+      </CardContent>
+    </Card>
   );
 }
