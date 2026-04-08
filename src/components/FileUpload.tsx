@@ -73,13 +73,14 @@ export function FileUpload({
             const input = document.createElement("input");
             input.type = "file";
             input.accept = ".csv";
+            input.style.display = "none";
             input.onchange = (ev) => {
               const file = (ev.target as HTMLInputElement).files?.[0];
               if (file) handleFile(file);
+              input.remove();
             };
             document.body.appendChild(input);
             input.click();
-            document.body.removeChild(input);
           }}
         >
           {loaded ? (

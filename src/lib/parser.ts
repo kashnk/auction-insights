@@ -27,7 +27,8 @@ function parseNumber(val: string | undefined): number {
 }
 
 function normalizeHeader(h: string): string {
-  return h.toLowerCase().replace(/[^a-z0-9]/g, "");
+  // Strip BOM, whitespace, and non-alphanumeric characters
+  return h.replace(/^\uFEFF/, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function findHeader(
@@ -75,8 +76,8 @@ function normalizeDate(d: string): string {
 export function parseAuctionInsightsCSV(
   csvText: string
 ): AuctionInsightRow[] {
-  // Skip Google Ads report header rows (lines before actual CSV data)
-  const lines = csvText.split("\n");
+  // Strip BOM and skip Google Ads report header rows
+  const lines = csvText.replace(/^\uFEFF/, "").split("\n");
   let startIdx = 0;
   for (let i = 0; i < Math.min(lines.length, 10); i++) {
     if (
@@ -101,27 +102,24 @@ export function parseAuctionInsightsCSV(
   const hMap = buildHeaderMap(result.data[0]);
   const rows: AuctionInsightRow[] = [];
 
+  // Resolve header names once (findHeader returns original CSV column name)
+  const dateCol = findHeader(hMap, "Day", "Date", "Week", "Month", "Quarter", "Year", "date range");
+  const campaignCol = findHeader(hMap, "Campaign", "campaign name");
+  const domainCol = findHeader(hMap, "Display URL domain", "Domain", "Competitor", "display url", "search impr share domain");
+  const isCol = findHeader(hMap, "Search impr. share", "Impression share", "Impr. share", "search impression share");
+  const overlapCol = findHeader(hMap, "Search overlap rate", "Overlap rate");
+  const posAboveCol = findHeader(hMap, "Position above rate", "Search position above rate");
+  const topCol = findHeader(hMap, "Search top of page rate", "Top of page rate");
+  const absTopCol = findHeader(hMap, "Search abs. top of page rate", "Abs. top of page rate", "Absolute top of page rate");
+  const outrankCol = findHeader(hMap, "Search outranking share", "Outranking share");
+
   for (const row of result.data) {
-    const dateKey =
-      findHeader(hMap, "Day", "Date", "Week", "Month", "Quarter", "Year", "date range") || "";
-    const dateStr = dateKey ? row[hMap[normalizeHeader(dateKey)]] || "" : "";
+    const dateStr = dateCol ? row[dateCol] || "" : "";
     const { start, end } = parseDateRange(dateStr);
-
-    const campaignKey = findHeader(hMap, "Campaign", "campaign name") || "";
-    const campaign = campaignKey ? row[hMap[normalizeHeader(campaignKey)]] || "" : "";
-
-    const domainKey =
-      findHeader(hMap, "Display URL domain", "Domain", "Competitor", "display url", "search impr share domain") || "";
-    const domain = domainKey ? row[hMap[normalizeHeader(domainKey)]] || "" : "";
+    const campaign = campaignCol ? row[campaignCol] || "" : "";
+    const domain = domainCol ? row[domainCol] || "" : "";
 
     if (!domain) continue;
-
-    const isKey = findHeader(hMap, "Search impr. share", "Impression share", "Impr. share", "search impression share") || "";
-    const overlapKey = findHeader(hMap, "Search overlap rate", "Overlap rate") || "";
-    const posAboveKey = findHeader(hMap, "Position above rate", "Search position above rate") || "";
-    const topKey = findHeader(hMap, "Search top of page rate", "Top of page rate") || "";
-    const absTopKey = findHeader(hMap, "Search abs. top of page rate", "Abs. top of page rate", "Absolute top of page rate") || "";
-    const outrankKey = findHeader(hMap, "Search outranking share", "Outranking share") || "";
 
     rows.push({
       date: dateStr,
@@ -129,12 +127,12 @@ export function parseAuctionInsightsCSV(
       endDate: end,
       campaign,
       displayUrl: domain,
-      impressionShare: parsePercent(isKey ? row[hMap[normalizeHeader(isKey)]] : undefined),
-      overlapRate: parsePercent(overlapKey ? row[hMap[normalizeHeader(overlapKey)]] : undefined),
-      positionAboveRate: parsePercent(posAboveKey ? row[hMap[normalizeHeader(posAboveKey)]] : undefined),
-      topOfPageRate: parsePercent(topKey ? row[hMap[normalizeHeader(topKey)]] : undefined),
-      absTopOfPageRate: parsePercent(absTopKey ? row[hMap[normalizeHeader(absTopKey)]] : undefined),
-      outRankingShare: parsePercent(outrankKey ? row[hMap[normalizeHeader(outrankKey)]] : undefined),
+      impressionShare: parsePercent(isCol ? row[isCol] : undefined),
+      overlapRate: parsePercent(overlapCol ? row[overlapCol] : undefined),
+      positionAboveRate: parsePercent(posAboveCol ? row[posAboveCol] : undefined),
+      topOfPageRate: parsePercent(topCol ? row[topCol] : undefined),
+      absTopOfPageRate: parsePercent(absTopCol ? row[absTopCol] : undefined),
+      outRankingShare: parsePercent(outrankCol ? row[outrankCol] : undefined),
     });
   }
 
@@ -144,7 +142,7 @@ export function parseAuctionInsightsCSV(
 export function parseCampaignPerformanceCSV(
   csvText: string
 ): CampaignPerformanceRow[] {
-  const lines = csvText.split("\n");
+  const lines = csvText.replace(/^\uFEFF/, "").split("\n");
   let startIdx = 0;
   for (let i = 0; i < Math.min(lines.length, 10); i++) {
     if (
@@ -169,27 +167,26 @@ export function parseCampaignPerformanceCSV(
   const hMap = buildHeaderMap(result.data[0]);
   const rows: CampaignPerformanceRow[] = [];
 
+  // Resolve header names once
+  const dateCol = findHeader(hMap, "Day", "Date", "Week", "Month", "Quarter", "date range");
+  const campaignCol = findHeader(hMap, "Campaign", "campaign name");
+  const spendCol = findHeader(hMap, "Cost", "Spend", "Amount spent");
+  const clicksCol = findHeader(hMap, "Clicks");
+  const imprCol = findHeader(hMap, "Impressions", "Impr.", "Impr");
+  const convCol = findHeader(hMap, "Conversions", "Conv.", "Conv");
+  const cpcCol = findHeader(hMap, "Avg. CPC", "CPC", "Cost / click", "Average CPC");
+
   for (const row of result.data) {
-    const dateKey =
-      findHeader(hMap, "Day", "Date", "Week", "Month", "Quarter", "date range") || "";
-    const dateStr = dateKey ? row[hMap[normalizeHeader(dateKey)]] || "" : "";
+    const dateStr = dateCol ? row[dateCol] || "" : "";
     const { start, end } = parseDateRange(dateStr);
+    const campaign = campaignCol ? row[campaignCol] || "" : "";
 
-    const campaignKey = findHeader(hMap, "Campaign", "campaign name") || "";
-    const campaign = campaignKey ? row[hMap[normalizeHeader(campaignKey)]] || "" : "";
-
-    const spendKey = findHeader(hMap, "Cost", "Spend", "Amount spent") || "";
-    const clicksKey = findHeader(hMap, "Clicks") || "";
-    const imprKey = findHeader(hMap, "Impressions", "Impr.") || "";
-    const convKey = findHeader(hMap, "Conversions", "Conv.") || "";
-    const cpcKey = findHeader(hMap, "Avg. CPC", "CPC", "Cost / click", "Average CPC") || "";
-
-    const spend = parseCurrency(spendKey ? row[hMap[normalizeHeader(spendKey)]] : undefined);
-    const clicks = parseNumber(clicksKey ? row[hMap[normalizeHeader(clicksKey)]] : undefined);
-    const impressions = parseNumber(imprKey ? row[hMap[normalizeHeader(imprKey)]] : undefined);
-    const conversions = parseNumber(convKey ? row[hMap[normalizeHeader(convKey)]] : undefined);
-    const cpc = cpcKey
-      ? parseCurrency(row[hMap[normalizeHeader(cpcKey)]])
+    const spend = parseCurrency(spendCol ? row[spendCol] : undefined);
+    const clicks = parseNumber(clicksCol ? row[clicksCol] : undefined);
+    const impressions = parseNumber(imprCol ? row[imprCol] : undefined);
+    const conversions = parseNumber(convCol ? row[convCol] : undefined);
+    const cpc = cpcCol
+      ? parseCurrency(row[cpcCol])
       : clicks > 0
         ? spend / clicks
         : 0;
